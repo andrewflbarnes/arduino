@@ -8,6 +8,8 @@ int dataPin = 11;
 // Track which LEDs are on/offf
 int matrix = 0;
 
+// NOTE: Serial.print is freaking slow!
+
 void setup() {
   Serial.begin(9600);
   pinMode(latchPin, OUTPUT);
@@ -22,8 +24,17 @@ void printPrompt() {
 }
 
 void loop() {
+  // Looks dumb but reduces the wait on serial IO (println) which we only want to print after all input is successufully processed.
+  // Empirically I'm seeing a println take ~10ms so it shouldd be avoided - adding "debug" prints is horrific for "performance"
+  // As an example try an initial input of 1357 followed by 12345678123456781234567812345678123456781234567812345678123456781234567812345678
+  // with some daditional Serial.println statements
   if (Serial.available()) {
-    onAvailable ();
+    while (Serial.available() > 0) {
+      while (Serial.available() > 0) {
+        onAvailable();
+      }
+      delay(1);
+    }
     printPrompt();
   }
 }
@@ -39,13 +50,12 @@ void onAvailable() {
       int bin = 1 << (number - 1);
       matrix = matrix ^ bin;
     } else {
-      Serial.println("Invalid input");
+      Serial.print("Invalid input: ");
+      Serial.println(input);
     }
   }
   
   shiftMatrix(matrix);
-  
-  Serial.println(matrix);
 }
 
 void shiftMatrix(const unsigned int matrix) {
