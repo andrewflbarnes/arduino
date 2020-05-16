@@ -31,7 +31,7 @@ void setup() {
 
 void loop() {
   now = millis();
-  nowSeconds = (now / 1000) % 60;
+  nowSeconds = (now / 100) % 60;
 
   if (updateButtonState(now)) {
     switch (mode) {
