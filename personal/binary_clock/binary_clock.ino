@@ -1,4 +1,23 @@
-
+/**
+ * Hacky sketch for creating a binary clock.
+ *
+ * For a binary clock we need:
+ * - 5 LEDs for hours
+ * - 6 LEDs for minutes
+ * - 6 LEDs for seconds
+ *
+ * This is 17 LEDs total and the arduino only has 12 digital out pins
+ * if we ignore tx and rx.
+ *
+ * Using an 8 bit shift register (74HC595) we can set 8 LEDs using 3
+ * pins which brings us down to the 12 pins (yay!).
+ *
+ * We use the lower 6 bits to set the minutes LEDs and the upper 2 bits
+ * to set 2 of the second LEDs. All other LEDs use a dedicated PIN.
+ *
+ * A better way would be to use two shift registers and have a dedicated
+ * PIN for the 24h LED - but I only had one hence this sketch.
+ */
 const int SECOND_PINS[] = {7, 8, 9, 10}; // +2 managed by 74HC595 as below
 const int SECOND_COUNT = 4;
 const int HOUR_PINS[] = {2, 3, 4, 5, 6};
@@ -7,11 +26,11 @@ const boolean HOUR_24 = true;
 
 // minutes are managed by 74HC595. the two most significant bits are for seconds as well, bit 8 -> 2s, bit 7 -> 1s
 //Pin connected to ST_CP of 74HC595
-int latchPin = 11;
+int latchPin = 12;
 //Pin connected to SH_CP of 74HC595
 int clockPin = 13;
 ////Pin connected to DS of 74HC595
-int dataPin = 12;
+int dataPin = 11;
 // timing PINs
 
 // Track which LEDs are on/offf
