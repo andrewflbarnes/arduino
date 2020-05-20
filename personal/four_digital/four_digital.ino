@@ -10,6 +10,21 @@
  * corresponding to that digit is pulsed HIGH for 1ms
  */
 
+// 74HC595 -> 5461AS
+// Q0 -> 11
+// Q1 -> 7
+// Q2 -> 4
+// Q3 -> 2
+// Q4 -> 1
+// Q5 -> 10
+// Q6 -> 5
+// Q7 -> 3
+
+// Arduino -> 5461AS (each via 220 ohm resistor)
+// 3 -> 12
+// 4 -> 9
+// 5 -> 8
+// 6 -> 6
 
 const int DIGIT_COUNT = 4;
 int digits[DIGIT_COUNT] = {0, 0, 0, 0};
@@ -17,7 +32,7 @@ int digits[DIGIT_COUNT] = {0, 0, 0, 0};
 const int LATCH_PIN = 9;  //74HC595  pin 9 STCP
 const int CLOCK_PIN = 10; //74HC595  pin 10 SHCP
 const int DATA_PIN = 8;   //74HC595  pin 8 DS
-const int BUTTON_PIN = 2; // start, stop, reset
+const int BUTTON_PIN = 2; // start, stop, reset with 10k pulldown resistor
 const int DIGIT_PINS[DIGIT_COUNT] = {3, 4, 5, 6};
 
 // decimal places: max 3, min 0
