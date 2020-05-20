@@ -1,95 +1,97 @@
-//www.elegoo.com
-//2016.12.12
+/**
+ * Stop watch with stop, start and reset functionality via a button.
+ *
+ * This is a naive implementation using delay(1) to keep digits enabled
+ * long enough for a bright output.
+ *
+ * Includes a configurable decimal point (compile/upload time).
+ *
+ * To display each digit is loaded into the 74HC595 then the pin
+ * corresponding to that digit is pulsed HIGH for 1ms
+ */
 
-int latch=9;  //74HC595  pin 9 STCP
-int clock=10; //74HC595  pin 10 SHCP
-int data=8;   //74HC595  pin 8 DS
 
-int d1 = 5;
-int d2 = 4;
-int d3 = 3;
-int d4 = 6;
+const int DIGIT_COUNT = 4;
+int digits[DIGIT_COUNT] = {0, 0, 0, 0};
 
-int stopPin = 2;
+const int LATCH_PIN = 9;  //74HC595  pin 9 STCP
+const int CLOCK_PIN = 10; //74HC595  pin 10 SHCP
+const int DATA_PIN = 8;   //74HC595  pin 8 DS
+const int BUTTON_PIN = 2; // start, stop, reset
+const int DIGIT_PINS[DIGIT_COUNT] = {3, 4, 5, 6};
+
+// decimal places: max 3, min 0
+// NOTE: not accurate at 3dp because of the the delay calls
+const int DP = 2;
+
 boolean stopped = false;
+boolean reset = true;
+long start = 0;
 
-unsigned char table[]=
-{0x3f,0x06,0x5b,0x4f,0x66,0x6d,0x7d,0x07,0x7f,0x6f,0x77,0x7c
-,0x39,0x5e,0x79,0x71,0x00};//Display digital data
+const unsigned char TABLE[]= {0x3f,0x06,0x5b,0x4f,0x66,0x6d,0x7d,0x07,0x7f,0x6f,0x77,0x7c,0x39,0x5e,0x79,0x71,0x00};
 
 void setup() {
-  Serial.begin(9600);
-  pinMode(latch,OUTPUT);
-  pinMode(clock,OUTPUT);
-  pinMode(data,OUTPUT);
-  pinMode(d1,OUTPUT);
-  pinMode(d2,OUTPUT);
-  pinMode(d3,OUTPUT);
-  pinMode(d4,OUTPUT);
-  pinMode(stopPin,INPUT);
-
-  digitalWrite(d1, HIGH);
-  digitalWrite(d2, HIGH);
-  digitalWrite(d3, HIGH);
-  digitalWrite(d4, HIGH);
+  pinMode(LATCH_PIN, OUTPUT);
+  pinMode(CLOCK_PIN, OUTPUT);
+  pinMode(DATA_PIN, OUTPUT);
   
-  attachInterrupt(digitalPinToInterrupt(stopPin), switchStop, RISING);
-}
-/*   The most common method of using 74CH595
- *   latch->LOW : Begin transmitting signals.
- *   shiftOut(dataPin, clockPin, bitOrder, value)
- *   dataPin: the pin on which to output each bit. Allowed data types: int.
- *   clockPin: the pin to toggle once the dataPin has been set to the correct value. Allowed data types: int.
- *   bitOrder: which order to shift out the bits; either MSBFIRST or LSBFIRST. (Most Significant Bit First, or, Least Significant Bit First).
- *   value: the data to shift out. Allowed data types: byte. 
- *   latch->HIch : The end of the transmission signal.
-*/
-void Display(unsigned char num)
-{
-
-  digitalWrite(latch,LOW);
-  shiftOut(data,clock,MSBFIRST,table[num]);
-  digitalWrite(latch,HIGH);
+  for (int i = 0 - 1; i < DIGIT_COUNT; i++) {
+    pinMode(DIGIT_PINS[i], OUTPUT);
+    digitalWrite(DIGIT_PINS[i], HIGH);
+  }
+  
+  pinMode(BUTTON_PIN,INPUT);
+  attachInterrupt(digitalPinToInterrupt(BUTTON_PIN), switchPress, RISING);
 }
 
-void switchStop() {
-  stopped = !stopped;
-}
-
-int dig1 = 0;
-int dig2 = 0;
-int dig3 = 0;
-int dig4 = 0;
-void updateClock() {
-  int now = millis() % 1000;
-  dig1 = (now / 1000) % 10;
-  dig2 = (now / 100) % 10;
-  dig3 = (now / 10) % 10;
-  dig4 = now % 10;
+void switchPress() {
+  if (reset) {
+    reset = false;
+    stopped = false;
+    start = millis();
+  } else if (stopped) {
+    stopped = false;
+    reset = true;
+    start = 0;
+    for (int i = 0; i < DIGIT_COUNT; i++) {
+      digits[i] = 0;
+    }
+  } else {
+    stopped = true;
+    reset = false;
+  }
 }
 
 void loop() {
-  Serial.println(stopped);
-  if (!stopped) {
+  if (!stopped && !reset) {
     updateClock();
   }
-  Display(dig1);
-  digitalWrite(d1, LOW);
-  delay(1);
-  digitalWrite(d1, HIGH);
-  
-  Display(dig2);
-  digitalWrite(d2, LOW);
-  delay(1);
-  digitalWrite(d2, HIGH);
-  
-  Display(dig3);
-  digitalWrite(d3, LOW);
-  delay(1);
-  digitalWrite(d3, HIGH);
-  
-  Display(dig4);
-  digitalWrite(d4, LOW);
-  delay(1);
-  digitalWrite(d4, HIGH);
+  for (int i = 0; i < DIGIT_COUNT; i++) {
+    if (i == DIGIT_COUNT - DP - 1) {
+      // enable the decimal point
+      shiftDigit(digits[i], 0x80);
+    } else {
+      shiftDigit(digits[i]);
+    }
+    digitalWrite(DIGIT_PINS[i], LOW);
+    delay(1);
+    digitalWrite(DIGIT_PINS[i], HIGH);
+  }
+}
+
+void updateClock() {
+  long now = (millis() - start) / (long)pow(10, DIGIT_COUNT - DP - 1);
+  for (int i = 0; i < DIGIT_COUNT; i++) {
+    digits[i] = (int)(now / pow(10, DIGIT_COUNT - i - 1)) % 10;
+  }
+}
+
+void shiftDigit(unsigned char num) {
+  shiftDigit(num, 0);
+}
+
+void shiftDigit(unsigned char num, unsigned char modifier) {
+  digitalWrite(LATCH_PIN, LOW);
+  shiftOut(DATA_PIN, CLOCK_PIN, MSBFIRST, TABLE[num] | modifier);
+  digitalWrite(LATCH_PIN, HIGH);
 }
