@@ -1,14 +1,13 @@
 /**
  * Stop watch with stop, start and reset functionality via a button.
  *
- * This is a naive implementation using delay(1) to keep digits enabled
- * long enough for a bright output.
- *
  * Includes a configurable decimal point (compile/upload time).
  *
  * To display each digit is loaded into the 74HC595 then the pin
  * corresponding to that digit is pulsed HIGH for 1ms
  */
+
+const long POWER_10[] = {1, 10, 100, 1000, 10000};
 
 
 const int DIGIT_COUNT = 4;
@@ -20,13 +19,19 @@ const int DATA_PIN = 8;   //74HC595  pin 8 DS
 const int BUTTON_PIN = 2; // start, stop, reset
 const int DIGIT_PINS[DIGIT_COUNT] = {3, 4, 5, 6};
 
+const long ON_TIME = 2000;
+long lastOn = 0;
+
 // decimal places: max 3, min 0
-// NOTE: not accurate at 3dp because of the the delay calls
 const int DP = 2;
 
 boolean stopped = false;
 boolean reset = true;
-long start = 0;
+
+unsigned long start = 0;
+
+int displayDigit = 0;
+int lastDigit = DIGIT_COUNT - 1;
 
 const unsigned char TABLE[]= {0x3f,0x06,0x5b,0x4f,0x66,0x6d,0x7d,0x07,0x7f,0x6f,0x77,0x7c,0x39,0x5e,0x79,0x71,0x00};
 
@@ -44,12 +49,21 @@ void setup() {
   attachInterrupt(digitalPinToInterrupt(BUTTON_PIN), switchPress, RISING);
 }
 
+void loop() {
+  if (!stopped && !reset) {
+    updateClock();
+  }
+  refreshDisplay();
+}
+
 void switchPress() {
   if (reset) {
+    // was reset -> transition to running
     reset = false;
     stopped = false;
     start = millis();
   } else if (stopped) {
+    // was stopped -> transition to reset
     stopped = false;
     reset = true;
     start = 0;
@@ -57,32 +71,43 @@ void switchPress() {
       digits[i] = 0;
     }
   } else {
+    // was running -> transition to stopped
     stopped = true;
     reset = false;
   }
 }
 
-void loop() {
-  if (!stopped && !reset) {
-    updateClock();
-  }
+void updateClock() {
+  static unsigned long nowUnits;
+  
+  nowUnits = (millis() - start) / POWER_10[DIGIT_COUNT - DP - 1];
   for (int i = 0; i < DIGIT_COUNT; i++) {
-    if (i == DIGIT_COUNT - DP - 1) {
-      // enable the decimal point
-      shiftDigit(digits[i], 0x80);
-    } else {
-      shiftDigit(digits[i]);
-    }
-    digitalWrite(DIGIT_PINS[i], LOW);
-    delay(1);
-    digitalWrite(DIGIT_PINS[i], HIGH);
+    digits[i] = (int)(nowUnits / POWER_10[DIGIT_COUNT - i - 1]) % 10;
   }
 }
 
-void updateClock() {
-  long now = (millis() - start) / (long)pow(10, DIGIT_COUNT - DP - 1);
-  for (int i = 0; i < DIGIT_COUNT; i++) {
-    digits[i] = (int)(now / pow(10, DIGIT_COUNT - i - 1)) % 10;
+void refreshDisplay() {
+  static unsigned long now;
+  
+  now = micros();
+
+  // only update if the current digit/segment has been on for at least ON_TIME microseconds
+  if (now - ON_TIME > lastOn) {
+    lastOn = now;
+
+    lastDigit = displayDigit;
+    displayDigit = (displayDigit + 1) % DIGIT_COUNT;
+
+    digitalWrite(DIGIT_PINS[lastDigit], HIGH);
+    
+    if (displayDigit == DIGIT_COUNT - DP - 1) {
+      // enable the decimal point
+      shiftDigit(digits[displayDigit], 0x80);
+    } else {
+      shiftDigit(digits[displayDigit]);
+    }
+    
+    digitalWrite(DIGIT_PINS[displayDigit], LOW);
   }
 }
 
