@@ -7,6 +7,61 @@
  * Using 2 daisy chained 8 bit shift registers (74HC595) we can set 16 LEDs using 3
  * pins and have a dedicated PIN for the 16 hour LED.
  */
+
+/*
+ * Pin map
+ *
+ * Assume we have 15 LEDs as below in a row (s - seconds, m - minutes, h - hours)
+ * with high bits on the left
+ * HHHHH MMMMMM SSSSSS
+ *
+ * For example above the leftmost LED is H5 (hours bit 5 / 16 hour) and the rightmost bit
+ * is S1 (seconds bit 1 / 1 second)
+ *
+ * Use 2 74HC595. We will use 595(1) for the low bits (S1 - M2) and 595(2) for the high
+ * bits (M3 - H4).
+ *
+ * 595 - both
+ * 8 - LOW (GND)
+ * 10 - HIGH (reset)
+ * 13 - LOW (output enable)
+ * 16 - HIGH (VCC)
+ *
+ * 595(1) -> LED
+ * 1 -> S1
+ * 2 -> S2
+ * 3 -> S3
+ * 4 -> S4
+ * 5 -> S5
+ * 6 -> S6
+ * 7 -> M1
+ * 8 -> M2
+ *
+ * 595(2) -> LED
+ * 1 -> M1
+ * 2 -> M2
+ * 3 -> M3
+ * 4 -> M4
+ * 5 -> H1
+ * 6 -> H2
+ * 7 -> H3
+ * 8 -> H4
+ *
+ * Arduino -> LED
+ * 8 -> H5
+ *
+ * 595(1) -> 595(2)
+ * 11 -> 11
+ * 12 -> 12
+ * 9 -> 14 (Q7/QH out -> DS/SER)
+ *
+ * Arduino -> 595(1)
+ * 11 -> 14
+ * 12 -> 12
+ * 13 -> 11
+ */
+
+
 const boolean HOUR_24 = true;
 
 // Pin connected to ST_CP/RCLK of 74HC595
