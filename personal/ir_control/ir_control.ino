@@ -1,10 +1,17 @@
-//www.elegoo.com
-//2020.3.12
-
-#include "IRremote.h"
-#include "ir_control.h"
-
-/*
+/**
+ * IR receiver sketch which triggers lights.
+ * 
+ * Follows the below model which could be used to drive a race (only 1 set of LEDs connected)
+ * at the moment so would need expanding to support dual+ relay.
+ * - When starting ready LED is on
+ * - When the play button is pushed ready LED goes low and go LED turns on for 2 seconds
+ * - When func/stop is pushed the DSQ LED goes high
+ * - When rewind is pushed resets state and ready LED is on
+ * - When power is pressed all LEDs will turn off/on (state is preserved)
+ * 
+ * Makes use of a 74HC595 which is maybe excessive but provides better forward support (e.g.
+ * duals).
+ *
  * Pin Map
  *
  * Arduino -> 74HC595
@@ -21,24 +28,31 @@
  * 11 -> 1 (left side)
  */
 
+#include "IRremote.h"
+#include "ir_control.h"
+
+// IR receiver pin
 const int RECEIVE_PIN = 11;
 
+// 74HC595 pins
 const int LATCH_PIN = 8;
 const int SHIFT_PIN = 9;
 const int DATA_PIN = 10;
 
+// The Q pin to use on the 74HC595 (1 -> Q1/QA, 2-> Q2/QB, etc.) as per Pin Map
 const int LED_DSQ = 1;
 const int LED_READY = 2;
 const int LED_GO = 3;
 
+// Current state
 boolean statReady = true;
 boolean statDsq = false;
 boolean statGo = false;
+boolean statOn = true;
 
 unsigned long goTimer = 0;
+// How long the go LED will remain on in ms following it's activation
 const int GO_TIME_DELAY = 2000;
-
-boolean on = true;
 
 unsigned long now = 0;
 
@@ -101,7 +115,7 @@ void loop() {
 }
 
 void triggerOnOff() {
-  on = !on;
+  statOn = !statOn;
 }
 
 void triggerDsq() {
@@ -133,7 +147,7 @@ void updateLeds() {
 
   data = 0;
 
-  if (on) {
+  if (statOn) {
     data = switchLed(data, statReady, LED_READY);
     data = switchLed(data, statDsq, LED_DSQ);
     data = switchLed(data, statGo, LED_GO);

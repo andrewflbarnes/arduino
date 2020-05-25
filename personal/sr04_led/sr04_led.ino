@@ -4,6 +4,7 @@
  *
  * The closer the object the brighter the LED.
  */
+
 // Note: this particular lib is slow because of some artificial delays
 #include "SR04.h"
 
