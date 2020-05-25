@@ -4,7 +4,8 @@
  * Follows the below model which could be used to drive a race (only 1 set of LEDs connected)
  * at the moment so would need expanding to support dual+ relay.
  * - When starting ready LED is on
- * - When the play button is pushed ready LED goes low and go LED turns on for 2 seconds
+ * - When the play button is pushed ready LED turns off and go LED turns on.
+ *   After a defined delay (non-blocking) the go LED turns off and the ready LED turns back on.
  * - When func/stop is pushed the DSQ LED goes high
  * - When rewind is pushed resets state and ready LED is on
  * - When power is pressed all LEDs will turn off/on (state is preserved)
