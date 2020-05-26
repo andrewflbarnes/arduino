@@ -48,7 +48,7 @@
 #define LCD_D6 11
 #define LCD_D7 12
 
-//#define _LCD_FANCY_INIT_
+#define FANCY_INIT true
 
 // which column the temperature and humidity data should start at
 const int LCD_DATA_POS = 7;
@@ -85,28 +85,28 @@ void waitForSensorsInit(long delayMs) {
   long until = millis() + delayMs;
   int pos;
 
-#ifdef _LCD_FANCY_INIT_
-  lcd.setCursor(0, 0);
-  lcd.print("  INITIALISING  ");
-#else
-  templateLcd();
-#endif
+  if (FANCY_INIT) {
+    lcd.setCursor(0, 0);
+    lcd.print("  INITIALISING  ");
+  } else {
+    templateLcd();
+  }
 
   while (left > 0) {
-#ifdef _LCD_FANCY_INIT_
-    // Fill the bottom row with a "fully loaded" bar
-    lcd.setCursor(0, 1);
-    lcd.print("................");
-    
-    // Fill the end with spaces depending on how much time is left.
-    // The more time which is left, the lower the colulmn position,
-    // so the more spaces are written and the fewer "."s display
-    pos = map(left, delayMs, 0, 0, LCD_COLS);
-    lcd.setCursor(pos, 1);
-    lcd.print("                ");
-#endif
+    if (FANCY_INIT) {
+      // Fill the bottom row with a "fully loaded" bar
+      lcd.setCursor(0, 1);
+      lcd.print("................");
 
-    // No need to do this aggressively
+      // Fill the end with spaces depending on how much time is left.
+      // The more time which is left, the lower the colulmn position,
+      // so the more spaces are written and the fewer "."s display
+      pos = map(left, delayMs, 0, 0, LCD_COLS);
+      lcd.setCursor(pos, 1);
+      lcd.print("                ");
+    }
+
+    // Wait a while
     delay(10);
     left = until - millis();
   }
